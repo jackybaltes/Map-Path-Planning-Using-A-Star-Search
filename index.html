@@ -1,0 +1,884 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+        <title>Map Path Planning Using A Star Search</title>
+
+        <link rel="stylesheet" href="css/reveal.css">
+        <link rel="stylesheet" href="css/theme/ntnuerc.css">
+
+        <!-- Theme used for syntax highlighting of code -->
+        <link rel="stylesheet" href="lib/css/zenburn.css">
+        <script src="https://daybrush.com/scenejs/release/latest/dist/scene.min.js"></script>
+		
+        <!-- Printing and PDF exports -->
+        <script>
+            var link = document.createElement( 'link' );
+            link.rel = 'stylesheet';
+            link.type = 'text/css';
+            link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+            document.getElementsByTagName( 'head' )[0].appendChild( link );
+        </script>
+        <script src="js/ntnu.js"></script>
+    </head>
+    <body>
+        <div class="reveal">
+        <div class="slides">
+            
+<section id="start" data-state="start">
+
+
+<!-- Header -->
+  
+
+<!-- Background -->
+
+
+<!-- Slide -->
+<div class="jb-slide">
+
+<div class="jb-output-code jb-render">
+
+<!-- start embedded style -->
+
+<!-- end embedded style -->
+<div class="jb-output jb-render">
+
+<h1>Map Path Planning Using A Star Search</h1>
+
+<p>
+      Jacky Baltes<br>
+      National Taiwan Normal University<br>
+      Taipei, Taiwan<br>
+      <a href="mailto:jacky.baltes@ntnu.edu.tw">jacky.baltes@ntnu.edu.tw</a><br>
+</p>
+
+21 November 2020
+</div><!-- end of jb-output jb-render -->
+</div><!-- end of jb-output-code jb-render -->
+
+
+</div>
+<!-- Footer -->
+
+<div class="jb-footer-left plain">
+    <span id="id-89eec2c8-18fd-4813-9d74-c140e42f75cf" ><span id="id-89eec2c8-18fd-4813-9d74-c140e42f75cf"><img id="img-id-89eec2c8-18fd-4813-9d74-c140e42f75cf"     src="assets/images/logo.png"/></span>
+</span>
+
+</div>
+<div class="jb-footer-right plain">
+    <span id="id-b729d287-efca-4e0c-879a-5dc2c0447798" ><span id="id-b729d287-efca-4e0c-879a-5dc2c0447798"><img id="img-id-b729d287-efca-4e0c-879a-5dc2c0447798" width="162" height="138"   src="assets/images/robbi.png"/></span>
+</span>
+
+</div>
+
+<aside class="notes">
+
+</aside>
+
+
+
+</section>
+<section id="slide_00003_frag_00001" data-state="slide_00003_frag_00001">
+
+
+<!-- Header -->
+  
+
+<!-- Background -->
+
+
+<!-- Slide -->
+<div class="jb-slide">
+
+<div class="jb-output-code jb-render">
+
+<!-- start embedded style -->
+
+<!-- end embedded style -->
+<div class="jb-output jb-render">
+
+<h1>Creating the Map on the Fly</h1>
+
+<span id="id-66920881-7a4f-40ae-8fce-7c6e01d840c5" ><span id="id-66920881-7a4f-40ae-8fce-7c6e01d840c5"><img id="img-id-66920881-7a4f-40ae-8fce-7c6e01d840c5"     src="assets/images/map1.svg"/></span>
+</span>
+
+
+<div class="jb-text">
+<ul>
+<li>First we extract points from the map and then define roads between the points</li>
+</ul>
+</div>
+</div><!-- end of jb-output jb-render -->
+</div><!-- end of jb-output-code jb-render -->
+
+
+</div>
+<!-- Footer -->
+
+<div class="jb-footer-left plain">
+    <span id="id-c9a73ef1-288b-4740-95be-133fda9bf754" ><span id="id-c9a73ef1-288b-4740-95be-133fda9bf754"><img id="img-id-c9a73ef1-288b-4740-95be-133fda9bf754"     src="assets/images/logo.png"/></span>
+</span>
+
+</div>
+<div class="jb-footer-right plain">
+    <span id="id-5153d7b8-c340-4171-8468-41594df28c0e" ><span id="id-5153d7b8-c340-4171-8468-41594df28c0e"><img id="img-id-5153d7b8-c340-4171-8468-41594df28c0e" width="162" height="138"   src="assets/images/robbi.png"/></span>
+</span>
+
+</div>
+
+<aside class="notes">
+
+</aside>
+
+
+
+</section>
+<section id="slide_00004_frag_00001" data-state="slide_00004_frag_00001">
+
+
+<!-- Header -->
+  
+
+<!-- Background -->
+
+
+<!-- Slide -->
+<div class="jb-slide">
+<div class="jb-input jb-render jb-code" style="text-align:center">
+
+<!-- start embedded style -->
+
+<!-- end embedded style -->
+<div class="jb-input-code jb-render">
+<div class="highlight" style="background: #f8f8f8; color:#101010;display=inline-block;"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">import</span> <span style="color: #0000FF; font-weight: bold">numpy</span> <span style="color: #008000; font-weight: bold">as</span> <span style="color: #0000FF; font-weight: bold">np</span>
+<span style="color: #008000; font-weight: bold">import</span> <span style="color: #0000FF; font-weight: bold">math</span>
+
+<span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">pixels_to_map</span>( x, y ):
+  width, height <span style="color: #666666">=</span> <span style="color: #666666">625</span>, <span style="color: #666666">514</span>
+  <span style="color: #008000; font-weight: bold">return</span> x<span style="color: #666666">*100/</span>width, <span style="color: #666666">85</span> <span style="color: #666666">-</span> y<span style="color: #666666">*85</span> <span style="color: #666666">/</span> height
+
+map_points <span style="color: #666666">=</span> np<span style="color: #666666">.</span>array( [
+  pixels_to_map( <span style="color: #666666">305</span>, <span style="color: #666666">256</span> ),    
+  pixels_to_map( <span style="color: #666666">74</span>, <span style="color: #666666">363</span> ),     
+  pixels_to_map( <span style="color: #666666">578</span>,<span style="color: #666666">116</span>),      
+  pixels_to_map( <span style="color: #666666">438</span>,<span style="color: #666666">71</span>),        
+  pixels_to_map( <span style="color: #666666">370</span>,<span style="color: #666666">200</span>),
+
+  <span style="color: #408080; font-style: italic"># Index 5</span>
+  pixels_to_map( <span style="color: #666666">565</span>,<span style="color: #666666">192</span>),
+  pixels_to_map( <span style="color: #666666">311</span>,<span style="color: #666666">381</span>),
+  pixels_to_map( <span style="color: #666666">184</span>,<span style="color: #666666">438</span>),
+  pixels_to_map( <span style="color: #666666">210</span>,<span style="color: #666666">296</span>),
+  pixels_to_map( <span style="color: #666666">80</span>,<span style="color: #666666">472</span>),
+
+  <span style="color: #408080; font-style: italic"># Index 10</span>
+  pixels_to_map( <span style="color: #666666">66</span>,<span style="color: #666666">197</span>),
+  pixels_to_map( <span style="color: #666666">108</span>,<span style="color: #666666">207</span>),
+  pixels_to_map( <span style="color: #666666">156</span>,<span style="color: #666666">216</span>),
+  pixels_to_map( <span style="color: #666666">298</span>,<span style="color: #666666">220</span>),
+  pixels_to_map( <span style="color: #666666">68</span>,<span style="color: #666666">90</span>),
+
+  <span style="color: #408080; font-style: italic"># Index 15</span>
+  pixels_to_map( <span style="color: #666666">110</span>,<span style="color: #666666">88</span>),
+  pixels_to_map( <span style="color: #666666">150</span>,<span style="color: #666666">84</span>),
+  pixels_to_map( <span style="color: #666666">228</span>,<span style="color: #666666">72</span>),
+  pixels_to_map( <span style="color: #666666">193</span>,<span style="color: #666666">24</span>),
+  pixels_to_map( <span style="color: #666666">262</span>, <span style="color: #666666">19</span>),
+
+  <span style="color: #408080; font-style: italic"># Index 20</span>
+  pixels_to_map( <span style="color: #666666">348</span>,<span style="color: #666666">328</span>),
+  pixels_to_map( <span style="color: #666666">354</span>,<span style="color: #666666">280</span>),
+  pixels_to_map( <span style="color: #666666">345</span>,<span style="color: #666666">229</span>),
+
+] )
+
+tmp_roads <span style="color: #666666">=</span> [
+         [ <span style="color: #666666">2</span>, <span style="color: #666666">3</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">3</span>, <span style="color: #666666">4</span>, <span style="color: #666666">1</span> ],
+        <span style="color: #408080; font-style: italic"># [ 0, 4, 1 ],</span>
+         [ <span style="color: #666666">2</span>, <span style="color: #666666">5</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">4</span>, <span style="color: #666666">5</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">5</span>, <span style="color: #666666">6</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">0</span>, <span style="color: #666666">6</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">6</span>, <span style="color: #666666">7</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">7</span>, <span style="color: #666666">8</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">7</span>, <span style="color: #666666">9</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">1</span>, <span style="color: #666666">9</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">1</span>, <span style="color: #666666">8</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">1</span>, <span style="color: #666666">10</span>, <span style="color: #666666">1</span>],
+         [ <span style="color: #666666">10</span>, <span style="color: #666666">11</span>, <span style="color: #666666">1</span>],
+         [ <span style="color: #666666">11</span>, <span style="color: #666666">12</span>, <span style="color: #666666">1</span>],
+         [ <span style="color: #666666">12</span>, <span style="color: #666666">13</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">0</span>, <span style="color: #666666">13</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">10</span>, <span style="color: #666666">14</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">0</span>, <span style="color: #666666">8</span>, <span style="color: #666666">1</span> ],
+         [<span style="color: #666666">14</span>,<span style="color: #666666">15</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">11</span>,<span style="color: #666666">15</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">15</span>,<span style="color: #666666">16</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">12</span>,<span style="color: #666666">16</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">16</span>,<span style="color: #666666">17</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">17</span>,<span style="color: #666666">18</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">18</span>,<span style="color: #666666">19</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">13</span>,<span style="color: #666666">17</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">3</span>,<span style="color: #666666">19</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">6</span>, <span style="color: #666666">20</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">20</span>, <span style="color: #666666">21</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">21</span>,<span style="color: #666666">22</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">4</span>,<span style="color: #666666">22</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">0</span>,<span style="color: #666666">22</span>, <span style="color: #666666">1</span>]
+]
+
+<span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">generate_roads</span>( roads, points ):
+  
+  out <span style="color: #666666">=</span> []
+  <span style="color: #008000; font-weight: bold">for</span> frm, to, weight <span style="color: #AA22FF; font-weight: bold">in</span> roads:
+    p1x,p1y <span style="color: #666666">=</span> points[frm]
+    p2x,p2y <span style="color: #666666">=</span> points[to]
+
+    d <span style="color: #666666">=</span> math<span style="color: #666666">.</span>hypot( p1x<span style="color: #666666">-</span>p2x, p1y<span style="color: #666666">-</span>p2y )
+    out<span style="color: #666666">.</span>append( [frm, to, d <span style="color: #666666">*</span> weight, weight ] )
+    
+  <span style="color: #008000; font-weight: bold">return</span> out
+
+map_roads <span style="color: #666666">=</span> generate_roads( tmp_roads, map_points )
+</pre></div>
+
+</div><!-- end of jb-input-code jb-render -->
+
+</div>
+
+</div>
+<!-- Footer -->
+
+<div class="jb-footer-left plain">
+    <span id="id-157104c3-db7c-420c-bf94-622cc92fc5a1" ><span id="id-157104c3-db7c-420c-bf94-622cc92fc5a1"><img id="img-id-157104c3-db7c-420c-bf94-622cc92fc5a1"     src="assets/images/logo.png"/></span>
+</span>
+
+</div>
+<div class="jb-footer-right plain">
+    <span id="id-03736c94-7bc0-4345-ac1e-2a975fc97dcd" ><span id="id-03736c94-7bc0-4345-ac1e-2a975fc97dcd"><img id="img-id-03736c94-7bc0-4345-ac1e-2a975fc97dcd" width="162" height="138"   src="assets/images/robbi.png"/></span>
+</span>
+
+</div>
+
+<aside class="notes">
+
+</aside>
+
+
+
+</section>
+<section id="slide_00005_frag_00001" data-state="slide_00005_frag_00001">
+
+
+<!-- Header -->
+  
+
+<!-- Background -->
+
+
+<!-- Slide -->
+<div class="jb-slide">
+<div class="jb-input jb-render jb-code" style="text-align:center">
+
+<!-- start embedded style -->
+
+<!-- end embedded style -->
+<div class="jb-input-code jb-render">
+<div class="highlight" style="background: #f8f8f8; color:#101010;display=inline-block;"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">import</span> <span style="color: #0000FF; font-weight: bold">matplotlib.pyplot</span> <span style="color: #008000; font-weight: bold">as</span> <span style="color: #0000FF; font-weight: bold">plt</span>
+<span style="color: #008000; font-weight: bold">import</span> <span style="color: #0000FF; font-weight: bold">svgutils.compose</span> <span style="color: #008000; font-weight: bold">as</span> <span style="color: #0000FF; font-weight: bold">sc</span>
+
+fig<span style="color: #666666">=</span>plt<span style="color: #666666">.</span>figure( figsize<span style="color: #666666">=</span>(<span style="color: #666666">9</span>,<span style="color: #666666">9</span>) )
+ax <span style="color: #666666">=</span> fig<span style="color: #666666">.</span>add_subplot(<span style="color: #666666">1</span>,<span style="color: #666666">1</span>,<span style="color: #666666">1</span>)
+ax<span style="color: #666666">.</span>set_xlim((<span style="color: #666666">0</span>,<span style="color: #666666">100</span>))
+ax<span style="color: #666666">.</span>set_ylim((<span style="color: #666666">0</span>,<span style="color: #666666">100</span>))
+ax<span style="color: #666666">.</span>set_aspect(<span style="color: #BA2121">&quot;equal&quot;</span>)
+
+ax<span style="color: #666666">.</span>legend()
+
+ax<span style="color: #666666">.</span>plot([<span style="color: #666666">0</span>,<span style="color: #666666">0</span>], [<span style="color: #666666">0</span>,<span style="color: #666666">100</span>], <span style="color: #BA2121">&#39;b-&#39;</span>)
+<span style="color: #408080; font-style: italic">#ax.plot([0,100], [0,100], &#39;g-&#39;, linewidth=3)</span>
+<span style="color: #408080; font-style: italic">#ax.plot([100,0], [0,100], &#39;r-&#39;, linewidth=3)</span>
+
+ax<span style="color: #666666">.</span>scatter( map_points[:,<span style="color: #666666">0</span>], map_points[:,<span style="color: #666666">1</span>], <span style="color: #666666">20</span>, color<span style="color: #666666">=</span><span style="color: #BA2121">&#39;blue&#39;</span> )
+
+<span style="color: #408080; font-style: italic"># origin_x, origin_y = pixels_to_map(0,0)</span>
+<span style="color: #408080; font-style: italic"># ax.scatter( [origin_x], [origin_y], 100, color=&#39;red&#39;)</span>
+
+<span style="color: #408080; font-style: italic"># origin_x, origin_y = pixels_to_map(0,512)</span>
+<span style="color: #408080; font-style: italic"># ax.scatter( [origin_x], [origin_y], 100, color=&#39;red&#39;)</span>
+
+<span style="color: #408080; font-style: italic"># origin_x, origin_y = pixels_to_map(512,0)</span>
+<span style="color: #408080; font-style: italic"># ax.scatter( [origin_x], [origin_y], 100, color=&#39;red&#39;)</span>
+
+<span style="color: #408080; font-style: italic"># origin_x, origin_y = pixels_to_map(512,512)</span>
+<span style="color: #408080; font-style: italic"># ax.scatter( [origin_x], [origin_y], 100, color=&#39;red&#39;)</span>
+
+<span style="color: #008000; font-weight: bold">for</span> i,p <span style="color: #AA22FF; font-weight: bold">in</span> <span style="color: #008000">enumerate</span>( map_points ):
+  ax<span style="color: #666666">.</span>text( p[<span style="color: #666666">0</span>], p[<span style="color: #666666">1</span>], <span style="color: #BA2121">f&#39;P</span><span style="color: #BB6688; font-weight: bold">{</span>i<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">&#39;</span>)
+
+<span style="color: #008000; font-weight: bold">for</span> r <span style="color: #AA22FF; font-weight: bold">in</span> map_roads:
+  frm,to, _, _ <span style="color: #666666">=</span> r
+  p1x, p1y <span style="color: #666666">=</span> map_points[frm]
+  p2x, p2y <span style="color: #666666">=</span> map_points[to]
+
+  ax<span style="color: #666666">.</span>plot([p1x, p2x], [p1y, p2y], <span style="color: #BA2121">&#39;-&#39;</span>, linewidth<span style="color: #666666">=2</span>, color<span style="color: #666666">=</span><span style="color: #BA2121">&#39;#303030&#39;</span>)
+
+fig<span style="color: #666666">.</span>savefig(<span style="color: #BA2121">&#39;/tmp/plot.svg&#39;</span>, transparent<span style="color: #666666">=</span><span style="color: #008000; font-weight: bold">True</span>)
+sc<span style="color: #666666">.</span>Figure(<span style="color: #BA2121">&quot;8in&quot;</span>, <span style="color: #BA2121">&quot;8in&quot;</span>,
+          sc<span style="color: #666666">.</span>Panel(sc<span style="color: #666666">.</span>SVG( <span style="color: #BA2121">&#39;/content/BuildDir/reveal.js/assets/images/map1.svg&#39;</span> )<span style="color: #666666">.</span>move(<span style="color: #666666">85</span>,<span style="color: #666666">153</span>) ),
+          sc<span style="color: #666666">.</span>Panel(sc<span style="color: #666666">.</span>SVG( <span style="color: #BA2121">&#39;/tmp/plot.svg&#39;</span> ) )
+)<span style="color: #666666">.</span>save(<span style="color: #BA2121">&#39;/tmp/compose.svg&#39;</span>)
+
+<span style="color: #008000; font-weight: bold">with</span> <span style="color: #008000">open</span>(<span style="color: #BA2121">&quot;/tmp/compose.svg&quot;</span>, <span style="color: #BA2121">&quot;r&quot;</span>) <span style="color: #008000; font-weight: bold">as</span> f:
+  compose_svg <span style="color: #666666">=</span> f<span style="color: #666666">.</span>read()<span style="color: #666666">.</span>encode(<span style="color: #BA2121">&#39;utf-8&#39;</span>)
+
+compose <span style="color: #666666">=</span> addJBImage(<span style="color: #BA2121">&quot;compose&quot;</span>, <span style="color: #666666">0</span>, <span style="color: #666666">0</span>, data<span style="color: #666666">=</span>compose_svg, suffix<span style="color: #666666">=</span><span style="color: #BA2121">&quot;svg&quot;</span>)
+
+plt<span style="color: #666666">.</span>close()
+</pre></div>
+
+</div><!-- end of jb-input-code jb-render -->
+
+</div>
+
+</div>
+<!-- Footer -->
+
+<div class="jb-footer-left plain">
+    <span id="id-a08a3120-7ab1-4dea-922d-19deb849f929" ><span id="id-a08a3120-7ab1-4dea-922d-19deb849f929"><img id="img-id-a08a3120-7ab1-4dea-922d-19deb849f929"     src="assets/images/logo.png"/></span>
+</span>
+
+</div>
+<div class="jb-footer-right plain">
+    <span id="id-028824ae-299a-4a22-9e07-e753b6525af0" ><span id="id-028824ae-299a-4a22-9e07-e753b6525af0"><img id="img-id-028824ae-299a-4a22-9e07-e753b6525af0" width="162" height="138"   src="assets/images/robbi.png"/></span>
+</span>
+
+</div>
+
+<aside class="notes">
+
+</aside>
+
+
+
+</section>
+<section id="slide_00006_frag_00001" data-state="slide_00006_frag_00001">
+
+
+<!-- Header -->
+  
+
+<!-- Background -->
+
+
+<!-- Slide -->
+<div class="jb-slide">
+
+<div class="jb-output-code jb-render">
+
+<!-- start embedded style -->
+
+<!-- end embedded style -->
+<div class="jb-output jb-render">
+
+<span id="id-46c0bc89-162f-4f2f-9894-fb0403964e60" ><span id="id-46c0bc89-162f-4f2f-9894-fb0403964e60"><img id="img-id-46c0bc89-162f-4f2f-9894-fb0403964e60"     src="assets/images/compose.svg"/></span>
+</span>
+</div><!-- end of jb-output jb-render -->
+</div><!-- end of jb-output-code jb-render -->
+
+
+</div>
+<!-- Footer -->
+
+<div class="jb-footer-left plain">
+    <span id="id-ef22f896-c614-49cf-b77b-0b4f3c57db85" ><span id="id-ef22f896-c614-49cf-b77b-0b4f3c57db85"><img id="img-id-ef22f896-c614-49cf-b77b-0b4f3c57db85"     src="assets/images/logo.png"/></span>
+</span>
+
+</div>
+<div class="jb-footer-right plain">
+    <span id="id-0705e6f7-1125-4da2-92de-cfcab2e89821" ><span id="id-0705e6f7-1125-4da2-92de-cfcab2e89821"><img id="img-id-0705e6f7-1125-4da2-92de-cfcab2e89821" width="162" height="138"   src="assets/images/robbi.png"/></span>
+</span>
+
+</div>
+
+<aside class="notes">
+
+</aside>
+
+
+
+</section>
+<section id="slide_00007_frag_00001" data-state="slide_00007_frag_00001">
+
+
+<!-- Header -->
+  
+
+<!-- Background -->
+
+
+<!-- Slide -->
+<div class="jb-slide">
+<div class="jb-input jb-render jb-code" style="text-align:center">
+
+<!-- start embedded style -->
+
+<!-- end embedded style -->
+<div class="jb-input-code jb-render">
+<div style="font-size:0.5em"><!-- start of style="font-size:0.5em" -->
+<div class="highlight" style="background: #f8f8f8; color:#101010;display=inline-block;"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">heuristic_search</span>( initial, successor_func, is_goal_func, heur_func, node_limit <span style="color: #666666">=</span> <span style="color: #666666">1000</span>, depth_limit <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">None</span>, ax <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">None</span> ):
+    queue <span style="color: #666666">=</span> [ ( initial, heur_func(initial), <span style="color: #666666">0</span>, [initial] ) ]
+    num_nodes <span style="color: #666666">=</span> <span style="color: #666666">1</span>
+    max_queue <span style="color: #666666">=</span> <span style="color: #666666">0</span>
+    sol <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">None</span>
+    visited <span style="color: #666666">=</span> [ ]
+    frames <span style="color: #666666">=</span> []
+
+    <span style="color: #408080; font-style: italic">#print(&quot;Search started&quot;, queue)</span>
+    <span style="color: #008000; font-weight: bold">while</span>( <span style="color: #008000">len</span>( queue ) <span style="color: #666666">&gt;</span> <span style="color: #666666">0</span> ):
+        <span style="color: #408080; font-style: italic"># queue = queue[0:-1]</span>
+        <span style="color: #408080; font-style: italic">#print(&quot;Q&quot;, queue)</span>
+        <span style="color: #008000; font-weight: bold">if</span> ( <span style="color: #008000">len</span>(queue) <span style="color: #666666">&gt;</span> max_queue ):
+              max_queue <span style="color: #666666">=</span> <span style="color: #008000">len</span>(queue)
+        current, current_h, current_g, chist <span style="color: #666666">=</span> queue<span style="color: #666666">.</span>pop()
+        visited<span style="color: #666666">.</span>append( current )
+        <span style="color: #008000; font-weight: bold">if</span> ax <span style="color: #AA22FF; font-weight: bold">is</span> <span style="color: #AA22FF; font-weight: bold">not</span> <span style="color: #008000; font-weight: bold">None</span>:
+          <span style="color: #408080; font-style: italic">#print(&#39;visited&#39;, visited )</span>
+          frame <span style="color: #666666">=</span> drawEnvironment( ax, env, visited )
+          frames<span style="color: #666666">.</span>append( frame )
+
+        <span style="color: #408080; font-style: italic">#print(&#39;   &#39; * len(chist), current, &#39;[&#39;, chist, &#39;]&#39; )</span>
+        <span style="color: #408080; font-style: italic">#print(&quot;Num Nodes&quot;, numNodes)</span>
+        <span style="color: #408080; font-style: italic">#print( len(chist), depthLimit, printState( current ) )</span>
+        <span style="color: #008000; font-weight: bold">if</span> is_goal_func( current ):
+            sol <span style="color: #666666">=</span> chist
+            <span style="color: #008000; font-weight: bold">break</span>
+        <span style="color: #008000; font-weight: bold">if</span> ( depth_limit <span style="color: #AA22FF; font-weight: bold">is</span> <span style="color: #008000; font-weight: bold">None</span> ) <span style="color: #AA22FF; font-weight: bold">or</span> ( <span style="color: #008000">len</span>(chist) <span style="color: #666666">&lt;=</span> depth_limit ):
+            <span style="color: #008000">print</span>(<span style="color: #BA2121">&quot;current state&quot;</span>, current, current_h, current_g, chist )
+            <span style="color: #008000">print</span>(<span style="color: #BA2121">&quot;queue&quot;</span>, queue)
+            children <span style="color: #666666">=</span> successor_func( current )
+            <span style="color: #408080; font-style: italic">#print(&quot;children&quot;, children)</span>
+            <span style="color: #008000; font-weight: bold">for</span> child <span style="color: #AA22FF; font-weight: bold">in</span> children:
+                c, cost <span style="color: #666666">=</span> child
+                <span style="color: #008000; font-weight: bold">if</span> c <span style="color: #AA22FF; font-weight: bold">not</span> <span style="color: #AA22FF; font-weight: bold">in</span> chist:
+                    <span style="color: #408080; font-style: italic">#print(&quot;Add child&quot;, printState(c))</span>
+                    h <span style="color: #666666">=</span> heur_func( c )
+                    g <span style="color: #666666">=</span> current_g <span style="color: #666666">+</span> cost
+                    pos <span style="color: #666666">=</span> <span style="color: #666666">0</span>
+                    <span style="color: #008000; font-weight: bold">for</span> i <span style="color: #AA22FF; font-weight: bold">in</span> <span style="color: #008000">range</span>(<span style="color: #008000">len</span>(queue)<span style="color: #666666">-1</span>, <span style="color: #666666">-1</span>, <span style="color: #666666">-1</span> ):
+                      <span style="color: #008000; font-weight: bold">if</span> ( queue[i][<span style="color: #666666">1</span>] <span style="color: #666666">+</span> queue[i][<span style="color: #666666">2</span>] <span style="color: #666666">&gt;=</span> h <span style="color: #666666">+</span> g ):
+                        pos <span style="color: #666666">=</span> i <span style="color: #666666">+</span> <span style="color: #666666">1</span>
+                        <span style="color: #008000; font-weight: bold">break</span>
+                    queue<span style="color: #666666">.</span>insert(pos, (c, h, g, chist <span style="color: #666666">+</span> [c] ))
+                    num_nodes <span style="color: #666666">=</span> num_nodes <span style="color: #666666">+</span> <span style="color: #666666">1</span>
+                    <span style="color: #008000; font-weight: bold">if</span> ( num_nodes <span style="color: #666666">&gt;</span> node_limit ):
+                        <span style="color: #008000">print</span>(<span style="color: #BA2121">&quot;search terminated with num_nodes&quot;</span>, num_nodes )
+                        <span style="color: #008000; font-weight: bold">return</span> ( num_nodes, max_queue, <span style="color: #008000; font-weight: bold">None</span> )
+        <span style="color: #408080; font-style: italic"># else:</span>
+        <span style="color: #408080; font-style: italic">#   print(&quot;Depth cutoff&quot;, len(chist), &quot;&gt;&quot;, depth_limit )</span>
+    <span style="color: #008000; font-weight: bold">return</span> ( num_nodes, max_queue, sol, frames )
+</pre></div>
+
+</div><!-- end of style="font-size:0.5em" -->
+</div><!-- end of jb-input-code jb-render -->
+
+</div>
+
+</div>
+<!-- Footer -->
+
+<div class="jb-footer-left plain">
+    <span id="id-a749b3e5-39ee-4d97-8bda-e2013ac08b47" ><span id="id-a749b3e5-39ee-4d97-8bda-e2013ac08b47"><img id="img-id-a749b3e5-39ee-4d97-8bda-e2013ac08b47"     src="assets/images/logo.png"/></span>
+</span>
+
+</div>
+<div class="jb-footer-right plain">
+    <span id="id-02a388b6-6b86-4519-9ad5-8afda3f4adfa" ><span id="id-02a388b6-6b86-4519-9ad5-8afda3f4adfa"><img id="img-id-02a388b6-6b86-4519-9ad5-8afda3f4adfa" width="162" height="138"   src="assets/images/robbi.png"/></span>
+</span>
+
+</div>
+
+<aside class="notes">
+
+</aside>
+
+
+
+</section>
+<section id="slide_00008_frag_00001" data-state="slide_00008_frag_00001">
+
+
+<!-- Header -->
+  
+
+<!-- Background -->
+
+
+<!-- Slide -->
+<div class="jb-slide">
+
+<div class="jb-output-code jb-render">
+
+<!-- start embedded style -->
+
+<!-- end embedded style -->
+<div class="jb-output jb-render">
+
+<h1>Iterative Deepening A* Search</h1>
+
+<div class="jb-text">
+<li>Memory requirement in A* search may also be exponential in the length of the solution</li>
+<li>Infeasible for large problems</li>
+<li>Similar to breadth first search, we can use iterative deepening to trade off 
+memory space for run time (Overhead is usually negligible)</li>
+<li>In A* search, we do not increase by level, but by heuristic + cost function limits</li>
+</div>
+</div><!-- end of jb-output jb-render -->
+</div><!-- end of jb-output-code jb-render -->
+
+
+</div>
+<!-- Footer -->
+
+<div class="jb-footer-left plain">
+    <span id="id-6781364c-a6e4-4d83-939a-2d1538c3da9c" ><span id="id-6781364c-a6e4-4d83-939a-2d1538c3da9c"><img id="img-id-6781364c-a6e4-4d83-939a-2d1538c3da9c"     src="assets/images/logo.png"/></span>
+</span>
+
+</div>
+<div class="jb-footer-right plain">
+    <span id="id-87f578a7-195f-4b80-9e77-c55be3acd28e" ><span id="id-87f578a7-195f-4b80-9e77-c55be3acd28e"><img id="img-id-87f578a7-195f-4b80-9e77-c55be3acd28e" width="162" height="138"   src="assets/images/robbi.png"/></span>
+</span>
+
+</div>
+
+<aside class="notes">
+
+</aside>
+
+
+
+</section>
+<section id="slide_00009_frag_00001" data-state="slide_00009_frag_00001">
+
+
+<!-- Header -->
+  
+
+<!-- Background -->
+
+
+<!-- Slide -->
+<div class="jb-slide">
+
+<div class="jb-output-code jb-render">
+
+<!-- start embedded style -->
+
+<!-- end embedded style -->
+<div class="jb-output jb-render">
+
+<h1>Modelling Different Constraints</h1>
+
+<div class="jb-text">
+<ul>
+<li>Increase weight on certain roads, to discourage the use of these roads by the algorithm</li>
+<li>Increase/decrease the cost of certain actions</li>
+<ul>
+<li>UPS and other parcel delivery companies change their route planners so that at busy
+intersections, the driver will do 3 right turns instead of 1 left turn. The reason is that three 
+right hand turns are safer and often faster in big intersections.
+<span id="id-aa09c32d-822a-4a71-8fd1-6254c7dc33f5" ><span id="id-aa09c32d-822a-4a71-8fd1-6254c7dc33f5"><img id="img-id-aa09c32d-822a-4a71-8fd1-6254c7dc33f5"     src="assets/images/c1.svg"/></span>
+</span>
+
+</li>
+</ul>
+
+</ul>
+</div>
+</div><!-- end of jb-output jb-render -->
+</div><!-- end of jb-output-code jb-render -->
+
+
+</div>
+<!-- Footer -->
+
+<div class="jb-footer-left plain">
+    <span id="id-e7770e45-fcb7-4176-b4f6-7179243c1778" ><span id="id-e7770e45-fcb7-4176-b4f6-7179243c1778"><img id="img-id-e7770e45-fcb7-4176-b4f6-7179243c1778"     src="assets/images/logo.png"/></span>
+</span>
+
+</div>
+<div class="jb-footer-right plain">
+    <span id="id-b5eef245-f594-44e7-9544-2f1ac1df0a4b" ><span id="id-b5eef245-f594-44e7-9544-2f1ac1df0a4b"><img id="img-id-b5eef245-f594-44e7-9544-2f1ac1df0a4b" width="162" height="138"   src="assets/images/robbi.png"/></span>
+</span>
+
+</div>
+
+<aside class="notes">
+
+</aside>
+
+
+
+</section>
+<section id="slide_00010_frag_00001" data-state="slide_00010_frag_00001">
+
+
+<!-- Header -->
+  
+
+<!-- Background -->
+
+
+<!-- Slide -->
+<div class="jb-slide">
+<div class="jb-input jb-render jb-code" style="text-align:center">
+
+<!-- start embedded style -->
+
+<!-- end embedded style -->
+<div class="jb-input-code jb-render">
+<div class="highlight" style="background: #f8f8f8; color:#101010;display=inline-block;"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">import</span> <span style="color: #0000FF; font-weight: bold">numpy</span> <span style="color: #008000; font-weight: bold">as</span> <span style="color: #0000FF; font-weight: bold">np</span>
+<span style="color: #008000; font-weight: bold">import</span> <span style="color: #0000FF; font-weight: bold">math</span>
+
+<span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">pixels_to_map</span>( x, y ):
+  width, height <span style="color: #666666">=</span> <span style="color: #666666">625</span>, <span style="color: #666666">514</span>
+  <span style="color: #008000; font-weight: bold">return</span> x<span style="color: #666666">*100/</span>width, <span style="color: #666666">85</span> <span style="color: #666666">-</span> y<span style="color: #666666">*85</span> <span style="color: #666666">/</span> height
+
+map_points <span style="color: #666666">=</span> np<span style="color: #666666">.</span>array( [
+  pixels_to_map( <span style="color: #666666">305</span>, <span style="color: #666666">256</span> ),    
+  pixels_to_map( <span style="color: #666666">74</span>, <span style="color: #666666">363</span> ),     
+  pixels_to_map( <span style="color: #666666">578</span>,<span style="color: #666666">116</span>),      
+  pixels_to_map( <span style="color: #666666">438</span>,<span style="color: #666666">71</span>),        
+  pixels_to_map( <span style="color: #666666">370</span>,<span style="color: #666666">200</span>),
+
+  <span style="color: #408080; font-style: italic"># Index 5</span>
+  pixels_to_map( <span style="color: #666666">565</span>,<span style="color: #666666">192</span>),
+  pixels_to_map( <span style="color: #666666">311</span>,<span style="color: #666666">381</span>),
+  pixels_to_map( <span style="color: #666666">184</span>,<span style="color: #666666">438</span>),
+  pixels_to_map( <span style="color: #666666">210</span>,<span style="color: #666666">296</span>),
+  pixels_to_map( <span style="color: #666666">80</span>,<span style="color: #666666">472</span>),
+
+  <span style="color: #408080; font-style: italic"># Index 10</span>
+  pixels_to_map( <span style="color: #666666">66</span>,<span style="color: #666666">197</span>),
+  pixels_to_map( <span style="color: #666666">108</span>,<span style="color: #666666">207</span>),
+  pixels_to_map( <span style="color: #666666">156</span>,<span style="color: #666666">216</span>),
+  pixels_to_map( <span style="color: #666666">298</span>,<span style="color: #666666">220</span>),
+  pixels_to_map( <span style="color: #666666">68</span>,<span style="color: #666666">90</span>),
+
+  <span style="color: #408080; font-style: italic"># Index 15</span>
+  pixels_to_map( <span style="color: #666666">110</span>,<span style="color: #666666">88</span>),
+  pixels_to_map( <span style="color: #666666">150</span>,<span style="color: #666666">84</span>),
+  pixels_to_map( <span style="color: #666666">228</span>,<span style="color: #666666">72</span>),
+  pixels_to_map( <span style="color: #666666">193</span>,<span style="color: #666666">24</span>),
+  pixels_to_map( <span style="color: #666666">262</span>, <span style="color: #666666">19</span>),
+
+  <span style="color: #408080; font-style: italic"># Index 20</span>
+  pixels_to_map( <span style="color: #666666">348</span>,<span style="color: #666666">328</span>),
+  pixels_to_map( <span style="color: #666666">354</span>,<span style="color: #666666">280</span>),
+  pixels_to_map( <span style="color: #666666">345</span>,<span style="color: #666666">229</span>),
+
+] )
+
+<span style="color: #408080; font-style: italic"># Fast roards go through points 6, 0, 13, 17, 18</span>
+<span style="color: #408080; font-style: italic"># Another fast road: 1, 8, 0, 22, 4, 3</span>
+
+tmp_roads <span style="color: #666666">=</span> [
+         [ <span style="color: #666666">2</span>, <span style="color: #666666">3</span>, <span style="color: #666666">5</span> ],
+         [ <span style="color: #666666">3</span>, <span style="color: #666666">4</span>, <span style="color: #666666">3</span> ],
+        <span style="color: #408080; font-style: italic"># [ 0, 4, 1 ],</span>
+         [ <span style="color: #666666">2</span>, <span style="color: #666666">5</span>, <span style="color: #666666">5</span> ],
+         [ <span style="color: #666666">4</span>, <span style="color: #666666">5</span>, <span style="color: #666666">5</span> ],
+         [ <span style="color: #666666">5</span>, <span style="color: #666666">6</span>, <span style="color: #666666">5</span> ],
+         [ <span style="color: #666666">0</span>, <span style="color: #666666">6</span>, <span style="color: #666666">1</span> ],
+         [ <span style="color: #666666">6</span>, <span style="color: #666666">7</span>, <span style="color: #666666">5</span> ],
+         [ <span style="color: #666666">7</span>, <span style="color: #666666">8</span>, <span style="color: #666666">5</span> ],
+         [ <span style="color: #666666">7</span>, <span style="color: #666666">9</span>, <span style="color: #666666">5</span> ],
+         [ <span style="color: #666666">1</span>, <span style="color: #666666">9</span>, <span style="color: #666666">5</span> ],
+         [ <span style="color: #666666">1</span>, <span style="color: #666666">8</span>, <span style="color: #666666">50</span> ],
+         [ <span style="color: #666666">1</span>, <span style="color: #666666">10</span>, <span style="color: #666666">5</span>],
+         [ <span style="color: #666666">10</span>, <span style="color: #666666">11</span>, <span style="color: #666666">5</span>],
+         [ <span style="color: #666666">11</span>, <span style="color: #666666">12</span>, <span style="color: #666666">5</span>],
+         [ <span style="color: #666666">12</span>, <span style="color: #666666">13</span>, <span style="color: #666666">5</span> ],
+         [ <span style="color: #666666">0</span>, <span style="color: #666666">13</span>, <span style="color: #666666">5</span> ],
+         [ <span style="color: #666666">10</span>, <span style="color: #666666">14</span>, <span style="color: #666666">5</span> ],
+         [ <span style="color: #666666">0</span>, <span style="color: #666666">8</span>, <span style="color: #666666">1</span> ],
+         [<span style="color: #666666">14</span>,<span style="color: #666666">15</span>, <span style="color: #666666">5</span>],
+         [<span style="color: #666666">11</span>,<span style="color: #666666">15</span>, <span style="color: #666666">5</span>],
+         [<span style="color: #666666">15</span>,<span style="color: #666666">16</span>, <span style="color: #666666">5</span>],
+         [<span style="color: #666666">12</span>,<span style="color: #666666">16</span>, <span style="color: #666666">5</span>],
+         [<span style="color: #666666">16</span>,<span style="color: #666666">17</span>, <span style="color: #666666">5</span>],
+         [<span style="color: #666666">17</span>,<span style="color: #666666">18</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">18</span>,<span style="color: #666666">19</span>, <span style="color: #666666">5</span>],
+         [<span style="color: #666666">13</span>,<span style="color: #666666">17</span>, <span style="color: #666666">1</span>],
+         [<span style="color: #666666">3</span>,<span style="color: #666666">19</span>, <span style="color: #666666">5</span>],
+         [<span style="color: #666666">6</span>, <span style="color: #666666">20</span>, <span style="color: #666666">5</span>],
+         [<span style="color: #666666">20</span>, <span style="color: #666666">21</span>, <span style="color: #666666">5</span>],
+         [<span style="color: #666666">21</span>,<span style="color: #666666">22</span>, <span style="color: #666666">5</span>],
+         [<span style="color: #666666">4</span>,<span style="color: #666666">22</span>, <span style="color: #666666">3</span>],
+         [<span style="color: #666666">0</span>,<span style="color: #666666">22</span>, <span style="color: #666666">3</span>]
+]
+
+<span style="color: #008000; font-weight: bold">def</span> <span style="color: #0000FF">generate_roads</span>( roads, points ):
+  out <span style="color: #666666">=</span> []
+  <span style="color: #008000; font-weight: bold">for</span> frm, to, weight <span style="color: #AA22FF; font-weight: bold">in</span> roads:
+    p1x,p1y <span style="color: #666666">=</span> points[frm]
+    p2x,p2y <span style="color: #666666">=</span> points[to]
+
+    d <span style="color: #666666">=</span> math<span style="color: #666666">.</span>hypot( p1x<span style="color: #666666">-</span>p2x, p1y<span style="color: #666666">-</span>p2y )
+    out<span style="color: #666666">.</span>append( [frm, to, d <span style="color: #666666">*</span> weight, weight ] )
+  <span style="color: #008000; font-weight: bold">return</span> out
+
+map_roads <span style="color: #666666">=</span> generate_roads( tmp_roads, map_points )
+<span style="color: #008000; font-weight: bold">for</span> i,r <span style="color: #AA22FF; font-weight: bold">in</span> <span style="color: #008000">enumerate</span>( map_roads ):
+  <span style="color: #008000">print</span>(<span style="color: #BA2121">&#39;map_roads&#39;</span>, i, r)
+</pre></div>
+
+</div><!-- end of jb-input-code jb-render -->
+
+</div>
+<div class="jb-print jb-render">
+<div class="jb-output jb-render code" style="text-align:center">
+<div class="jb-stdout code" style="display:inline-block; width:90%">
+<pre >
+map_roads 0 [2, 3, 118.01884597178457, 5]
+map_roads 1 [3, 4, 71.8409394186053, 3]
+map_roads 2 [2, 5, 63.695245375824605, 5]
+map_roads 3 [4, 5, 156.14017866559155, 5]
+map_roads 4 [5, 6, 256.34332992997537, 5]
+map_roads 5 [0, 6, 20.693486096465964, 1]
+map_roads 6 [6, 7, 111.99924066466322, 5]
+map_roads 7 [7, 8, 119.24061277435197, 5]
+map_roads 8 [7, 9, 87.82124913207987, 5]
+map_roads 9 [1, 9, 90.25418903203052, 5]
+map_roads 10 [1, 8, 1220.9205814810898, 50]
+map_roads 11 [1, 10, 137.40593768025897, 5]
+map_roads 12 [10, 11, 34.602424809425436, 5]
+map_roads 13 [11, 12, 39.114420872364605, 5]
+map_roads 14 [12, 13, 113.64813614147268, 5]
+map_roads 15 [0, 13, 30.288722701486655, 5]
+map_roads 16 [10, 14, 88.48722919269366, 5]
+map_roads 17 [0, 8, 16.576953692486505, 1]
+map_roads 18 [14, 15, 33.64067050621432, 5]
+map_roads 19 [11, 15, 98.40794957322163, 5]
+map_roads 20 [15, 16, 32.170465468045535, 5]
+map_roads 21 [12, 16, 109.24946654809702, 5]
+map_roads 22 [16, 17, 63.183934950874914, 5]
+map_roads 23 [17, 18, 9.714307333047099, 1]
+map_roads 24 [18, 19, 55.35460189246226, 5]
+map_roads 25 [13, 17, 26.915633748171505, 1]
+map_roads 26 [3, 19, 147.21856331587423, 5]
+map_roads 27 [6, 20, 52.88299894688858, 5]
+map_roads 28 [20, 21, 39.9779210817961, 5]
+map_roads 29 [21, 22, 42.77951084359637, 5]
+map_roads 30 [4, 22, 18.734736705652416, 3]
+map_roads 31 [0, 22, 23.410776607894277, 3]
+</pre>
+</div>
+</div>
+
+</div><!-- end of jb-print jb-render -->
+
+</div>
+<!-- Footer -->
+
+<div class="jb-footer-left plain">
+    <span id="id-ec57bdd5-419f-4701-bbbf-c6988bfc379b" ><span id="id-ec57bdd5-419f-4701-bbbf-c6988bfc379b"><img id="img-id-ec57bdd5-419f-4701-bbbf-c6988bfc379b"     src="assets/images/logo.png"/></span>
+</span>
+
+</div>
+<div class="jb-footer-right plain">
+    <span id="id-8f5e07b5-f4e4-4022-963f-8ea667f21daa" ><span id="id-8f5e07b5-f4e4-4022-963f-8ea667f21daa"><img id="img-id-8f5e07b5-f4e4-4022-963f-8ea667f21daa" width="162" height="138"   src="assets/images/robbi.png"/></span>
+</span>
+
+</div>
+
+<aside class="notes">
+
+</aside>
+
+
+
+</section>
+        </div>
+        </div>
+
+        <script src="js/reveal.js"></script>
+
+        <script>
+            // More info about config & dependencies:
+            // - https://github.com/hakimel/reveal.js#configuration
+            // - https://github.com/hakimel/reveal.js#dependencies
+            Reveal.initialize({
+                math: {
+                    mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js',
+                    config: 'TeX-AMS_HTML-full',  // See http://docs.mathjax.org/en/latest/config-files.html
+                    // tex2jax: {
+                    //     inlineMath: [['$', '$'], ['\(', '\)']],
+                    //     displayMath: [['$$', '$$'], ['\[', '\]']],
+                    //     processEscapes: true,
+                    //     processEnvironments: true,
+                    //     skipTags: ['script', 'noscript', 'style', 'textarea', 'code', 'pre'],
+                    //     displayAlign: 'center',
+                    // }                
+                },
+                dependencies: [
+                    { src: 'plugin/markdown/marked.js' },
+                    { src: 'plugin/markdown/markdown.js' },
+                    { src: 'plugin/notes/notes.js', async: true },
+                    { src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+                    { src: 'plugin/math/math.js', async: true }
+                ]
+            });
+        </script>
+
+        <script>
+            <!-- Assets -->
+var assets = {
+"robbi" : new JBImage( "robbi", "12677", "162", "138", null, null, "assets/images/robbi", "png" ),
+"logo" : new JBImage( "logo", "12033", "0", "0", null, null, "assets/images/logo", "png" ),
+"fira-logo-1" : new JBImage( "fira-logo-1", "93836", "0", "0", null, null, "assets/images/FIRA-logo-1", "png" ),
+"pairLogo" : new JBImage( "pairLogo", "63051", "0", "0", null, null, "assets/images/pairLogo", "png" ),
+"map1" : new JBImage( "map1", "632738", "0", "0", null, null, "assets/images/map1", "svg" ),
+"compose" : new JBImage( "compose", "339213", "0", "0", null, null, "assets/images/compose", "svg" ),
+"c1" : new JBImage( "c1", "3538", "0", "0", null, null, "assets/images/c1", "svg" ) 
+};
+var assetInstances = {
+    "id-b729d287-efca-4e0c-879a-5dc2c0447798": assets["robbi"],
+    "id-5153d7b8-c340-4171-8468-41594df28c0e": assets["robbi"],
+    "id-03736c94-7bc0-4345-ac1e-2a975fc97dcd": assets["robbi"],
+    "id-028824ae-299a-4a22-9e07-e753b6525af0": assets["robbi"],
+    "id-0705e6f7-1125-4da2-92de-cfcab2e89821": assets["robbi"],
+    "id-02a388b6-6b86-4519-9ad5-8afda3f4adfa": assets["robbi"],
+    "id-87f578a7-195f-4b80-9e77-c55be3acd28e": assets["robbi"],
+    "id-b5eef245-f594-44e7-9544-2f1ac1df0a4b": assets["robbi"],
+    "id-8f5e07b5-f4e4-4022-963f-8ea667f21daa": assets["robbi"],
+    "id-89eec2c8-18fd-4813-9d74-c140e42f75cf": assets["logo"],
+    "id-c9a73ef1-288b-4740-95be-133fda9bf754": assets["logo"],
+    "id-157104c3-db7c-420c-bf94-622cc92fc5a1": assets["logo"],
+    "id-a08a3120-7ab1-4dea-922d-19deb849f929": assets["logo"],
+    "id-ef22f896-c614-49cf-b77b-0b4f3c57db85": assets["logo"],
+    "id-a749b3e5-39ee-4d97-8bda-e2013ac08b47": assets["logo"],
+    "id-6781364c-a6e4-4d83-939a-2d1538c3da9c": assets["logo"],
+    "id-e7770e45-fcb7-4176-b4f6-7179243c1778": assets["logo"],
+    "id-ec57bdd5-419f-4701-bbbf-c6988bfc379b": assets["logo"],
+    "id-66920881-7a4f-40ae-8fce-7c6e01d840c5": assets["map1"],
+    "id-46c0bc89-162f-4f2f-9894-fb0403964e60": assets["compose"],
+    "id-aa09c32d-822a-4a71-8fd1-6254c7dc33f5": assets["c1"]
+};
+<!-- End of Assets -->
+
+            convertURLs(assetInstances, "smart-path");
+        </script>
+        <script>
+            <!-- Characters -->
+var characters =
+{};
+<!-- End of Characters -->
+
+        </script>
+    </body>
+</html>
